@@ -17,14 +17,6 @@ class Task {
   }
 }
 
-class TaskData extends ChangeNotifier {
-  List<Task> tasks = [
-    Task(name: 'Task 1'),
-    Task(name: 'Task 2'),
-    Task(name: 'Task 3'),
-  ];
-}
-
 class TaskScreen extends StatefulWidget {
   const TaskScreen({super.key});
   @override
@@ -50,12 +42,82 @@ class _TaskScreenState extends State<TaskScreen> {
     getQuests();
   }
 
+  Future<void> addQuest() async {
+    String? questName;
+    DateTime? deadline;
+
+    await showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Add Quest'),
+            content: Column(
+              children: <Widget>[
+                TextField(
+                  onChanged: (value) {
+                    questName = value;
+                  },
+                  decoration: InputDecoration(
+                    hintText: 'Quest Name',
+                  ),
+                ),
+                ElevatedButton(
+                  child: Text('Select Deadline'),
+                  onPressed: () async {
+                    deadline = await showDatePicker(
+                      context: context,
+                      initialDate: DateTime.now(),
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime(2099, 12, 31),
+                    );
+                  },
+                ),
+              ],
+            ),
+            actions: <Widget>[
+              TextButton(
+                child: Text('Cancel'),
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+              ),
+              TextButton(
+                child: Text('Add'),
+                onPressed: () {
+                  if (questName != null && deadline != null) {
+                    // POSTを入れる
+                    var url = Uri.parse(
+                        'https://bene-hack-api.azurewebsites.net/quest');
+                    var json = jsonEncode({
+                      'name': questName,
+                      'deadline': deadline!.toIso8601String(),
+                      'isFinished': false
+                    });
+                    http.post(url,
+                        body: json,
+                        headers: {'Content-Type': 'application/json'});
+                    //
+                    setState(() {
+                      quests.add({
+                        'name': questName,
+                        'deadline': deadline!.toIso8601String(),
+                        'id': quests.length + 1
+                      });
+                    });
+                    Navigator.pop(context);
+                  }
+                },
+              ),
+            ],
+          );
+        });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Todo List'),
-        //backgroundColor: Colors.lightBlueAccent,
       ),
       body: ListView.builder(
           itemCount: quests.length,
@@ -71,6 +133,11 @@ class _TaskScreenState extends State<TaskScreen> {
                   );
                 },
               )),
+      floatingActionButton: FloatingActionButton(
+        onPressed: addQuest,
+        child: Icon(Icons.add),
+        backgroundColor: Colors.lightBlueAccent,
+      ),
       backgroundColor: Colors.lightBlueAccent,
     );
   }
